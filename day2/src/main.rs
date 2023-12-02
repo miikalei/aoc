@@ -1,5 +1,6 @@
 use regex::Regex;
 use std::{
+    cmp::max,
     fs::File,
     io::{BufRead, BufReader},
     path::Path,
@@ -12,12 +13,6 @@ fn main() {
         Ok(file) => file,
     };
 
-    const BAG: Bag = Bag {
-        red: 12,
-        blue: 14,
-        green: 13,
-    };
-
     let reader = BufReader::new(file);
 
     let re = Regex::new(r"Game (\d+): (.+)").expect("Regexp should compile.");
@@ -27,21 +22,18 @@ fn main() {
     for line in reader.lines() {
         let line = line.unwrap();
         let mat = re.captures(&line).expect("Should have a match").extract();
-        let (_full, [game_id, game_result]) = mat;
+        let (_full, [_game_id, game_result]) = mat;
 
-        let game_id: u32 = game_id.parse().expect("game_id should be an integer.");
-        let mut game_sets = game_result.split(';');
+        let game_sets = game_result.split(';');
+        let bags = game_sets.map(Bag::new);
 
-        let game_failed = game_sets.any(|set| {
-            let bag_result = BagResult::new(set);
-            !BAG.fits(&bag_result)
-        });
-        if !game_failed {
-            sum += game_id;
-        }
+        let min_bag = bags.reduce(|acc, e| Bag::max(&acc, &e)).unwrap();
+        let power = min_bag.power();
+
+        sum += power;
     }
 
-    println!("Sum of successful game ids: {}", sum);
+    println!("Sum of the powers of the minimal bags: {}", sum);
 }
 
 struct Bag {
@@ -65,6 +57,18 @@ impl Bag {
 
     pub fn fits(&self, other: &Bag) -> bool {
         self.blue >= other.blue && self.green >= other.green && self.red >= other.red
+    }
+
+    pub fn max(bag1: &Bag, bag2: &Bag) -> Self {
+        Bag {
+            red: max(bag1.red, bag2.red),
+            green: max(bag1.green, bag2.green),
+            blue: max(bag1.blue, bag2.blue),
+        }
+    }
+
+    pub fn power(&self) -> u32 {
+        self.blue * self.red * self.green
     }
 }
 
