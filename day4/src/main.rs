@@ -1,22 +1,47 @@
 use std::{fs::File, io::Read, path::Path, str::FromStr};
 
 fn main() {
-    let input = read_file_to_string("input.txt");
+    let input = read_file_to_string("test.txt");
 
-    let cards = input.lines().map(|line| {
-        let line = match line.strip_suffix('\n') {
-            Some(line) => line,
-            None => line,
-        };
-        line.parse::<Card>().unwrap()
-    });
+    let cards: Vec<_> = input
+        .lines()
+        .map(|line| {
+            let line = match line.strip_suffix('\n') {
+                Some(line) => line,
+                None => line,
+            };
+            line.parse::<Card>().unwrap()
+        })
+        .collect();
+    let card_set = CardSet { cards };
 
-    let mut sum = 0;
-    for card in cards {
-        sum += card.value();
+    println!("The total sum: {}", card_set.total_value());
+}
+
+struct CardSet {
+    cards: Vec<Card>,
+}
+
+impl CardSet {
+    fn total_value(&self) -> usize {
+        let mut sum = 0;
+        for i in 0..self.cards.len() {
+            sum += self.value_of_card(i);
+        }
+        sum
     }
-
-    println!("The total sum: {}", sum);
+    // Lazy non-dynamic implementation
+    fn value_of_card(&self, index: usize) -> usize {
+        if index > self.cards.len() {
+            return 0;
+        }
+        let match_count = self.cards[index].match_count();
+        let mut sum = 0;
+        for i in index + 1..=index + match_count {
+            sum += self.value_of_card(i);
+        }
+        sum + 1
+    }
 }
 
 #[derive(Debug)]
