@@ -5,76 +5,91 @@ use std::{fs::File, path::Path};
 fn main() {
     let input = read_file_to_string("input.txt");
 
-    let mut sum = 0;
-    let number_re = Regex::new(r"\d+").unwrap();
     let row_length = input.lines().next().unwrap().len() as i32 + 1; // Add for newline char
+
+    let symbols = find_symbols_from_string(&input);
+    let numbers = find_numbers_from_string(&input);
 
     println!("Row length: {}", row_length);
 
-    for mat in number_re.find_iter(&input) {
-        let number = mat.as_str().parse::<u32>().unwrap();
-        let start = mat.start() as i32;
-        let end = mat.end() as i32;
+    let mut sum = 0;
 
-        let has_symbol_near = has_symbol_near(&input, start, end, row_length);
-
-        if has_symbol_near {
-            println!("YES: {}; {}; {};", number, start, end);
-            sum += number;
-        } else {
-            println!("NO :{}; {}; {};", number, start, end);
+    for symbol in symbols.iter().filter(|symbol| symbol.symbol == '*') {
+        let neighbor_numbers: Vec<_> = numbers
+            .iter()
+            .filter(|number| number.is_next_to(symbol.index, row_length))
+            .collect();
+        if neighbor_numbers.len() == 2 {
+            println!(
+                "Found neighbor numbers: {}, {}",
+                neighbor_numbers[0].number, neighbor_numbers[1].number
+            );
+            sum += neighbor_numbers[0].number * neighbor_numbers[1].number
         }
     }
 
-    println!("The sum of numbers with a symbol near them: {}", sum);
+    println!("The sum of gear powers: {}", sum);
 }
 
-fn has_symbol_near(input: &str, start: i32, end: i32, row_length: i32) -> bool {
-    // Line above
-
-    for i in start - 1..end + 1 {
-        if has_symbol_at(input, i - row_length) {
-            return true;
-        }
-    }
-
-    // End points
-    if has_symbol_at(input, start - 1) {
-        return true;
-    }
-    if has_symbol_at(input, end) {
-        return true;
-    }
-
-    // Line below
-    for i in start - 1..end + 1 {
-        if has_symbol_at(input, i + row_length) {
-            return true;
-        }
-    }
-    false
+#[derive(Debug)]
+struct Symbol {
+    pub symbol: char,
+    pub index: u32,
 }
 
-fn has_symbol_at(input: &str, index: i32) -> bool {
-    if index < 0 {
-        return false;
+#[derive(Debug)]
+struct Number {
+    pub number: u32,
+    pub start_index: u32,
+    pub end_index: u32,
+}
+
+impl Number {
+    fn overlaps(&self, index: i32) -> bool {
+        if index < 0 {
+            return false;
+        }
+        let index = index as u32;
+        self.start_index <= index && index < self.end_index
     }
-    let char = input.chars().nth(index.try_into().unwrap());
-    !matches!(
-        char,
-        None | Some('.')
-            | Some('1')
-            | Some('2')
-            | Some('3')
-            | Some('4')
-            | Some('5')
-            | Some('6')
-            | Some('7')
-            | Some('8')
-            | Some('9')
-            | Some('0')
-            | Some('\n')
-    )
+
+    fn is_next_to(&self, index: u32, row_length: i32) -> bool {
+        let index = index as i32;
+        self.overlaps(index - row_length - 1)
+            || self.overlaps(index - row_length)
+            || self.overlaps(index - row_length + 1)
+            || self.overlaps(index - 1)
+            || self.overlaps(index + 1)
+            || self.overlaps(index + row_length - 1)
+            || self.overlaps(index + row_length)
+            || self.overlaps(index + row_length + 1)
+    }
+}
+
+fn find_symbols_from_string(input: &str) -> Vec<Symbol> {
+    let re = Regex::new(r"[^\n.[0-9]]").expect("Regexp should have compiled.");
+
+    re.find_iter(input)
+        .map(|mat| Symbol {
+            symbol: mat.as_str().chars().next().unwrap(),
+            index: mat.start() as u32,
+        })
+        .collect()
+}
+
+fn find_numbers_from_string(input: &str) -> Vec<Number> {
+    let re = Regex::new(r"[0-9]+").expect("Regexp should have compiled.");
+
+    re.find_iter(input)
+        .map(|mat| Number {
+            number: mat
+                .as_str()
+                .parse()
+                .expect("Did not manage to parse number."),
+            start_index: mat.start() as u32,
+            end_index: mat.end() as u32,
+        })
+        .collect()
 }
 
 fn read_file_to_string(filename: &str) -> String {
