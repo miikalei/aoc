@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs::File, io::Read, path::Path, time::Instant};
+use std::{cmp::max, collections::HashMap, fs::File, io::Read, path::Path};
 
 const FILE_PATH: &str = "input.txt";
 
@@ -18,38 +18,62 @@ fn main() {
     }
 
     run(&s);
-
-    let now = Instant::now();
-    for i in partition(12, 4) {
-        println!("{:?}", i)
-    }
-    println!(
-        "Running non-iterator version took {} nanoseconds.",
-        now.elapsed().as_millis()
-    );
-
-    let now = Instant::now();
-    for i in IntegerPartition::new(12, 4) {
-        println!("{:?}", i)
-    }
-    println!(
-        "Running iterator version took {} nanoseconds.",
-        now.elapsed().as_millis()
-    );
 }
 
 fn run(s: &str) {
-    let mut ingredients = Vec::new();
+    let ingredients = Ingredients::new(s);
 
-    for line in s.lines() {
-        let (name, rest) = line.split_once(':').unwrap();
-        let ingredient = Ingredient::new(name, rest);
+    let mut max_score = 0;
+    for weights in IntegerPartition::new(100, 4) {
+        let score = ingredients.score(&weights);
+        if score > max_score {
+            println!("New max score: {}", score);
+            max_score = score;
+        }
+    }
+}
 
-        ingredients.push(ingredient);
+#[derive(Debug)]
+struct Ingredients {
+    pub ingredients: Vec<Ingredient>,
+}
+
+impl Ingredients {
+    pub fn new(input: &str) -> Self {
+        let mut ingredients = Vec::new();
+
+        for line in input.lines() {
+            let (name, rest) = line.split_once(':').unwrap();
+            let ingredient = Ingredient::new(name, rest);
+
+            ingredients.push(ingredient);
+        }
+        Self { ingredients }
     }
 
-    for i in ingredients {
-        println!("{:?}", i);
+    pub fn score(&self, weights: &Vec<u32>) -> u32 {
+        let totals = self.total(weights);
+        let mut ret: u32 = 1;
+        for (key, value) in totals {
+            if key != "calories" {
+                ret *= max(value, 0) as u32
+            }
+        }
+        ret
+    }
+
+    pub fn total(&self, weights: &Vec<u32>) -> HashMap<String, i32> {
+        assert_eq!(weights.len(), self.ingredients.len());
+        let mut totals = HashMap::new();
+
+        for i in 0..weights.len() {
+            let ingredient = &self.ingredients[i];
+            let weight = weights[i];
+            for (key, value) in &ingredient.properties {
+                *totals.entry(key.to_string()).or_insert(0) += weight as i32 * value;
+            }
+        }
+        totals
     }
 }
 
