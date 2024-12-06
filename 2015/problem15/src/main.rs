@@ -1,7 +1,6 @@
-use std::{cmp, collections::HashMap, fs::File, hash::Hash, io::Read, path::Path};
+use std::{collections::HashMap, fs::File, io::Read, path::Path};
 
 const FILE_PATH: &str = "input.txt";
-const COMPETITION_LENGTH: i32 = 2503;
 
 fn main() {
     let path = Path::new(FILE_PATH);
@@ -19,80 +18,64 @@ fn main() {
     }
 
     run(&s);
+
+    for i in partition(5, 3) {
+        println!("{:?}", i)
+    }
 }
 
 fn run(s: &str) {
-    let mut dist_dict = ReindeerStatsDict::new();
-    let mut score_dict: HashMap<String, i32> = HashMap::new();
-    for line in s.lines() {
-        dist_dict.insert(line);
-    }
-    println!("Dict: {:?}", &dist_dict.dict);
-    for t in 1..=COMPETITION_LENGTH {
-        let best_dist = dist_dict
-            .dict
-            .values()
-            .map(|reindeer| score_reindeer(reindeer, t))
-            .max()
-            .unwrap();
-        for (reindeer_name, reindeer_stats) in &dist_dict.dict {
-            if score_reindeer(reindeer_stats, t) == best_dist {
-                // increase score
-                score_dict
-                    .entry(reindeer_name.to_string())
-                    .and_modify(|e| {
-                        *e += 1;
-                    })
-                    .or_insert(1);
-            }
-        }
-    }
-    let best_score = score_dict.values().max().unwrap();
-    println!("Best score by any reindeer: {}", best_score);
-}
+    let mut ingredients = Vec::new();
 
-fn score_reindeer(reindeer: &ReindeerStats, t: i32) -> i32 {
-    let cycle_length = reindeer.span + reindeer.rest;
-    let partial_cycle_length = t % cycle_length;
-    let full_cycles = (t - partial_cycle_length) / cycle_length;
-    full_cycles * reindeer.span * reindeer.speed
-        + cmp::min(partial_cycle_length, reindeer.span) * reindeer.speed
+    for line in s.lines() {
+        let (name, rest) = line.split_once(':').unwrap();
+        let ingredient = Ingredient::new(name, rest);
+
+        ingredients.push(ingredient);
+    }
+
+    for i in ingredients {
+        println!("{:?}", i);
+    }
 }
 
 #[derive(Debug)]
-struct ReindeerStatsDict {
-    pub dict: HashMap<String, ReindeerStats>,
+struct Ingredient {
+    name: String,
+    properties: HashMap<String, i32>,
 }
 
-impl ReindeerStatsDict {
-    fn new() -> Self {
-        ReindeerStatsDict {
-            dict: HashMap::new(),
+impl Ingredient {
+    pub fn new(name: &str, ingredient_string: &str) -> Self {
+        let properties_array = ingredient_string.split(',');
+        let mut properties = HashMap::new();
+        for prop in properties_array {
+            let (prop_name, prop_number) = prop.trim().split_once(' ').unwrap();
+            properties.insert(prop_name.to_string(), prop_number.parse().unwrap());
+        }
+        Ingredient {
+            name: name.to_string(),
+            properties,
         }
     }
-
-    pub fn insert(&mut self, line: &str) {
-        let (name, rest) = line.split_once(" can fly ").unwrap();
-        let (speed, rest) = rest.split_once(" km/s for ").unwrap();
-        let (span, rest) = rest
-            .split_once(" seconds, but then must rest for ")
-            .unwrap();
-        let rest = rest.strip_suffix(" seconds.").unwrap();
-
-        self.dict.insert(
-            name.to_string(),
-            ReindeerStats {
-                speed: speed.parse().unwrap(),
-                span: span.parse().unwrap(),
-                rest: rest.parse().unwrap(),
-            },
-        );
-    }
 }
 
-#[derive(PartialEq, Eq, Debug, Hash)]
-struct ReindeerStats {
-    speed: i32,
-    span: i32,
-    rest: i32,
+fn partition(total: u32, n: u32) -> Vec<Vec<u32>> {
+    let mut stack: Vec<(u32, u32, Vec<u32>)> = vec![(total, n, Vec::new())];
+    let mut results = Vec::new();
+
+    while let Some((remaining, parts, mut current)) = stack.pop() {
+        if parts == 1 {
+            current.push(remaining);
+            results.push(current);
+            continue;
+        }
+
+        for i in 0..=remaining {
+            let mut new_current = current.clone();
+            new_current.push(i);
+            stack.push((remaining - i, parts - 1, new_current));
+        }
+    }
+    results
 }
