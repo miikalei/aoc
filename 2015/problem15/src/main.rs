@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs::File, io::Read, path::Path};
+use std::{collections::HashMap, fs::File, io::Read, path::Path, time::Instant};
 
 const FILE_PATH: &str = "input.txt";
 
@@ -19,9 +19,23 @@ fn main() {
 
     run(&s);
 
-    for i in partition(5, 3) {
+    let now = Instant::now();
+    for i in partition(12, 4) {
         println!("{:?}", i)
     }
+    println!(
+        "Running non-iterator version took {} nanoseconds.",
+        now.elapsed().as_millis()
+    );
+
+    let now = Instant::now();
+    for i in IntegerPartition::new(12, 4) {
+        println!("{:?}", i)
+    }
+    println!(
+        "Running iterator version took {} nanoseconds.",
+        now.elapsed().as_millis()
+    );
 }
 
 fn run(s: &str) {
@@ -78,4 +92,38 @@ fn partition(total: u32, n: u32) -> Vec<Vec<u32>> {
         }
     }
     results
+}
+
+struct IntegerPartition {
+    stack: Vec<(u32, u32, Vec<u32>)>,
+}
+
+impl IntegerPartition {
+    pub fn new(total: u32, n: u32) -> Self {
+        Self {
+            stack: vec![(total, n, vec![])],
+        }
+    }
+}
+
+impl Iterator for IntegerPartition {
+    type Item = Vec<u32>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some((remaining, parts, mut current)) = self.stack.pop() {
+            if parts == 1 {
+                current.push(remaining);
+                return Some(current);
+            }
+
+            for i in 0..=remaining {
+                let mut new_current = current.clone();
+                new_current.push(i);
+                self.stack.push((remaining - i, parts - 1, new_current));
+            }
+            self.next()
+        } else {
+            None
+        }
+    }
 }
