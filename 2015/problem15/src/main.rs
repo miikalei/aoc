@@ -25,8 +25,8 @@ fn run(s: &str) {
 
     let mut max_score = 0;
     for weights in IntegerPartition::new(100, 4) {
-        let score = ingredients.score(&weights);
-        if score > max_score {
+        let (score, cals) = ingredients.score(&weights);
+        if score > max_score && cals == 500 {
             println!("New max score: {}", score);
             max_score = score;
         }
@@ -51,15 +51,18 @@ impl Ingredients {
         Self { ingredients }
     }
 
-    pub fn score(&self, weights: &Vec<u32>) -> u32 {
+    pub fn score(&self, weights: &Vec<u32>) -> (u32, i32) {
         let totals = self.total(weights);
         let mut ret: u32 = 1;
+        let mut cals = 0;
         for (key, value) in totals {
             if key != "calories" {
                 ret *= max(value, 0) as u32
+            } else {
+                cals += value;
             }
         }
-        ret
+        (ret, cals)
     }
 
     pub fn total(&self, weights: &Vec<u32>) -> HashMap<String, i32> {
