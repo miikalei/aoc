@@ -1,6 +1,6 @@
-use std::path::Iter;
+use std::slice::Iter;
 
-use itertools::iproduct;
+use itertools::{iproduct, Itertools};
 
 fn main() {
     let boss = Fighter {
@@ -9,8 +9,11 @@ fn main() {
         armor: 2,
     };
     let mut lowest_price = i32::MAX;
+    let mut max_price = i32::MIN;
+
     for item_set in item_sets_iter() {
-        let (weapon, armor, ring1, ring2) = item_set;
+        let (weapon, armor, ring_set) = item_set;
+        let (ring1, ring2) = (ring_set[0], ring_set[1]);
         let total_price = weapon.cost + armor.cost + ring1.cost + ring2.cost;
         let me = Fighter {
             hitpoints: 100,
@@ -23,32 +26,24 @@ fn main() {
         if win && total_price < lowest_price {
             lowest_price = total_price;
         }
+        if !win && total_price > max_price {
+            max_price = total_price
+        }
         println!("With the price of {}, win is {}", total_price, win);
     }
-    println!("Overall, cheapest win with price {}", lowest_price)
-}
-
-fn find_item_set(budget: i32) {
-    // todo
+    println!("Overall, cheapest win is with price {}", lowest_price);
+    println!("Overall, most expensive loss is with price {}", max_price);
 }
 
 fn item_sets_iter() -> itertools::ConsTuples<
     itertools::Product<
-        itertools::ConsTuples<
-            itertools::Product<
-                itertools::Product<
-                    std::slice::Iter<'static, Item>,
-                    std::slice::Iter<'static, Item>,
-                >,
-                std::slice::Iter<'static, Item>,
-            >,
-            ((&'static Item, &'static Item), &'static Item),
-        >,
-        std::slice::Iter<'static, Item>,
+        itertools::Product<Iter<'static, Item>, Iter<'static, Item>>,
+        itertools::Combinations<Iter<'static, Item>>,
     >,
-    ((&'static Item, &'static Item, &'static Item), &'static Item),
+    ((&'static Item, &'static Item), Vec<&'static Item>),
 > {
-    iproduct!(WEAPONS.iter(), ARMORS.iter(), RINGS.iter(), RINGS.iter())
+    let ring_sets = RINGS.iter().combinations(2);
+    iproduct!(WEAPONS.iter(), ARMORS.iter(), ring_sets)
 }
 
 #[derive(Debug)]
@@ -85,7 +80,8 @@ const ARMORS: [Item; 6] = [
     Item::new(102, 0, 5),
 ];
 
-const RINGS: [Item; 7] = [
+const RINGS: [Item; 8] = [
+    Item::new(0, 0, 0),
     Item::new(0, 0, 0),
     Item::new(25, 1, 0),
     Item::new(50, 2, 0),
