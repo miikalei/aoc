@@ -2,7 +2,7 @@ use itertools::{self, repeat_n, Itertools};
 use std::cmp::max;
 
 fn main() {
-    let mut fight = Fight {
+    let fight = Fight {
         player_health: 50,
         player_mana: 500,
         boss_damage: 9,
@@ -10,25 +10,18 @@ fn main() {
         effects: vec![],
     };
 
-    // let plan = vec![
-    //     &POISON,
-    //     &MAGIC_MISSILE,
-    //     &RECHARGE,
-    //     &POISON,
-    //     &MAGIC_MISSILE,
-    //     &SHIELD,
-    //     &MAGIC_MISSILE,
-    // ];
-    // fight.fight(&plan);
-    // println!("Total mana cost: {}", total_mana_cost(&plan));
-
     let mut min_mana_win = i32::MAX;
+    let mut max_sequence_length = 0;
     for seq in spell_sequence_iter().take(3000000) {
+        if seq.len() > max_sequence_length {
+            max_sequence_length = seq.len();
+            println!("Encountered sequence of {} spells", max_sequence_length)
+        }
         // println!();
         // println!("Trying out a new fight with sequence: {:?}", seq);
+        let mana_cost = total_mana_cost(&seq);
         let mut fight = fight.clone();
         if let Some(true) = fight.fight(&seq) {
-            let mana_cost = total_mana_cost(&seq);
             if mana_cost < min_mana_win {
                 println!("Record, total mana cost: {}", mana_cost);
                 println!("Spell sequence used: {:?}", seq);
@@ -223,6 +216,15 @@ impl Fight {
     pub fn fight(&mut self, spells: &Vec<&Spell>) -> Option<bool> {
         for spell in spells {
             // println!("New turn starts.");
+
+            // Part 2 modification //
+            self.player_health -= 1;
+            if let Some(win) = self.player_won() {
+                // println!("Match ends! Win: {}", win);
+                return Some(win);
+            }
+            // Part 2 modification ends
+
             self.start_turn();
             self.print_situation();
             if let Some(win) = self.player_won() {
