@@ -3,19 +3,29 @@ use std::path::Iter;
 use itertools::iproduct;
 
 fn main() {
-    let me = Fighter {
-        hitpoints: 8,
-        damage: 5,
-        armor: 5,
-    };
-    let monster = Fighter {
-        hitpoints: 12,
-        damage: 7,
+    let boss = Fighter {
+        hitpoints: 103,
+        damage: 9,
         armor: 2,
     };
-    for item_set in item_sets_iter {
-        println!("{}"item_set);
+    let mut lowest_price = i32::MAX;
+    for item_set in item_sets_iter() {
+        let (weapon, armor, ring1, ring2) = item_set;
+        let total_price = weapon.cost + armor.cost + ring1.cost + ring2.cost;
+        let me = Fighter {
+            hitpoints: 100,
+            damage: weapon.damage + armor.damage + ring1.damage + ring2.damage,
+            armor: weapon.armor + armor.armor + ring1.armor + ring2.armor,
+        };
+
+        let win = me.wins(&boss);
+
+        if win && total_price < lowest_price {
+            lowest_price = total_price;
+        }
+        println!("With the price of {}, win is {}", total_price, win);
     }
+    println!("Overall, cheapest win with price {}", lowest_price)
 }
 
 fn find_item_set(budget: i32) {
@@ -41,6 +51,7 @@ fn item_sets_iter() -> itertools::ConsTuples<
     iproduct!(WEAPONS.iter(), ARMORS.iter(), RINGS.iter(), RINGS.iter())
 }
 
+#[derive(Debug)]
 struct Item {
     cost: i32,
     damage: i32,
@@ -65,7 +76,8 @@ const WEAPONS: [Item; 5] = [
     Item::new(74, 8, 0),
 ];
 
-const ARMORS: [Item; 5] = [
+const ARMORS: [Item; 6] = [
+    Item::new(0, 0, 0),
     Item::new(13, 0, 1),
     Item::new(31, 0, 2),
     Item::new(53, 0, 3),
@@ -73,7 +85,8 @@ const ARMORS: [Item; 5] = [
     Item::new(102, 0, 5),
 ];
 
-const RINGS: [Item; 6] = [
+const RINGS: [Item; 7] = [
+    Item::new(0, 0, 0),
     Item::new(25, 1, 0),
     Item::new(50, 2, 0),
     Item::new(100, 3, 0),
