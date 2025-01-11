@@ -18,7 +18,7 @@ struct Computer {
 impl Computer {
     pub fn new() -> Self {
         Self {
-            reg_a: 0,
+            reg_a: 1, // Part 2 modification
             reg_b: 0,
             step_counter: 0,
         }
